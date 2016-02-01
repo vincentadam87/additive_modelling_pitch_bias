@@ -13,28 +13,27 @@ class additive_model_lin_exp(object):
     """
 
     def __init__(self):
-        self.bias =  lambda w,dec,xc : lambda d : w*(d-xc)*tsr.exp(-np.abs(d-xc)**dec)
-        self.bias_np = lambda w,dec,xc : lambda d : w*(d-xc)*np.exp(-np.abs(d-xc)**dec)
+        self.bias =  lambda w,dec,xc : lambda d : w*(d-xc)*tsr.exp(-np.abs(d-xc)/dec)
+        self.bias_np = lambda w,dec,xc : lambda d : w*(d-xc)*np.exp(-np.abs(d-xc)/dec)
 
     def fit(self,x, y, mcmc_samples=1000):
-
         t = x.shape[0]-1  # number of additive components
         varnames = ['xc','w','decay','sigma','b','lam']
 
         with pm.Model() as model:
             # Priors for additive predictor
-            xc = pm.Normal('xc', mu=0, sd=1, shape=t)
+            xc = pm.Normal('xc', mu=0, sd=0.000100, shape=t)
             w = pm.Normal('w', mu=0, sd=2000, shape=t)
-            decay = pm.HalfNormal('decay', sd=10, shape=t)
+            decay = pm.HalfNormal('decay', sd=200, shape=t)
             # Prior for likelihood
             sigma = pm.Uniform('sigma', 0, 0.3)
-            b = pm.Normal('b', mu=0, sd=200)
+            b = pm.Normal('b', mu=0, sd=20)
             lam = pm.Uniform('lam', 0,0.3)
 
             # Building linear predictor
             lin_pred=0
-            for ii in range(1,t):
-                lin_pred += self.bias(w[ii],decay[ii],xc[ii])(x[ii])
+            for ii in range(1,t+1):
+                lin_pred += self.bias(w[ii-1],decay[ii-1],xc[ii-1])(x[ii,:])
 
             phi2 = pm.Deterministic('phi2', 0.5*lam + (1-lam)*phi(b + lin_pred + x[0,:]/sigma))
             y = pm.Bernoulli('y', p=phi2, observed=y)
@@ -50,7 +49,7 @@ class additive_model_lin_exp(object):
                           start=start,
                           progressbar=True) # draw posterior samples
 
-        return trace
+        return trace, pm.dic(trace,model)
 
     def posterior_summary(self,trace):
 

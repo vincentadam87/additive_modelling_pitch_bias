@@ -21,23 +21,30 @@ from data_loader.load_data import *
 from inference_toolboxes.pymc3_functions.inference_pymc3 import *
 
 
-samples=1000
-T = 3
+samples=10000
+T = 1
 inf = 0
 
-dataloader = Dataloader(DATA_PATH+'continuous.mat')
-F1,F2,Y = dataloader.subject_data(range(10),acc_filter=(0.65,0.8))
-x,y = get_trial_covariates(F1,F2,Y,T=T)
+dataloader = Dataloader(DATA_PATH +'continuous.mat')
 
-print x.shape,y.shape
+groups = 3
+acc_sample = np.array([[0.63,0.75],[0.75,0.88],[0.88,1]])
+color_mat = ['b','g','r']
+dic = np.empty([groups])
 
-m = additive_model_lin_exp()
-trace, dic = m.fit(x,y,mcmc_samples=samples)
-xp,m_,s_ = m.posterior_summary(trace)
+for ii in range(groups):
+    F1,F2,Y = dataloader.subject_data(range(10),acc_filter=acc_sample[ii,:])
+    x,y = get_trial_covariates(F1,F2,Y,T=T)
 
-for lag in range(T):
-    plt.fill_between(xp,y1=(m_-s_)[lag,:],y2=(m_+s_)[lag,:], alpha=0.5)
-    plt.plot(xp,m_[lag,:])
+    print x.shape,y.shape
+
+    m = additive_model_lin_exp()
+    trace,dic[ii] = m.fit(x,y,mcmc_samples=samples)
+    xp,m_,s_ = m.posterior_summary(trace)
+
+    for lag in range(T):
+        plt.fill_between(xp,y1=(m_-s_)[lag,:],y2=(m_+s_)[lag,:],color = color_mat[ii],alpha=0.5)
+        plt.plot(xp,m_[lag,:],color = color_mat[ii])
 plt.show()
-
 plt.savefig(OUTPUT_PATH  + "test.svg")
+print dic
