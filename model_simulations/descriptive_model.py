@@ -60,7 +60,7 @@ class AdditiveModel(AbstractModel):
         alpha = np.zeros(x.shape[0])
         for i_a,a_ in enumerate(self.a): # iterate over lag functions
             alpha += a_(x[:,i_a+1])
-        return self.lik(x[:,0]/self.p_lin-alpha)
+        return self.lik(x[:,0]*self.p_lin-alpha)
 
 class LinExpAdditiveModel(AdditiveModel):
     """
@@ -72,7 +72,7 @@ class LinExpAdditiveModel(AdditiveModel):
 
     def __init__(self,prm_add,prm_lin,prm_lik):
         """ x : p[0]*x*exp(-|x|/p[1]) """
-        bias = lambda w,d : lambda x : w*x*exp(-abs(x)/d)
+        bias = lambda w,d : lambda x : w*x*exp(-abs(x)*d)
         lik = lambda l : lambda x : l/2+(1-l)*phi(x)
         a = [bias(p[0],p[1]) for p in prm_add]
         super(LinExpAdditiveModel,self).__init__(a,prm_lin,lik(prm_lik))
