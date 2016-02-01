@@ -39,7 +39,7 @@ for ii in range(groups):
     print x.shape,y.shape
 
     m = additive_model_lin_exp()
-    trace,dic[ii] = m.fit(x,y,mcmc_samples=samples)
+    trace,model = m.fit(x,y,mcmc_samples=samples)
     xp,m_,s_ = m.posterior_summary(trace)
 
     for lag in range(T):

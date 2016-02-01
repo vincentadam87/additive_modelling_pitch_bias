@@ -13,8 +13,8 @@ class additive_model_lin_exp(object):
     """
 
     def __init__(self):
-        self.bias =  lambda w,dec,xc : lambda d : w*(d-xc)*tsr.exp(-np.abs(d-xc)/dec)
-        self.bias_np = lambda w,dec,xc : lambda d : w*(d-xc)*np.exp(-np.abs(d-xc)/dec)
+        self.bias =  lambda w,dec : lambda d : w*(d)*tsr.exp(-np.abs(d)/dec)
+        self.bias_np = lambda w,dec : lambda d : w*(d)*np.exp(-np.abs(d)/dec)
 
     def fit(self,x, y, mcmc_samples=1000):
         t = x.shape[0]-1  # number of additive components
@@ -22,7 +22,6 @@ class additive_model_lin_exp(object):
 
         with pm.Model() as model:
             # Priors for additive predictor
-            xc = pm.Normal('xc', mu=0, sd=0.000100, shape=t)
             w = pm.Normal('w', mu=0, sd=2000, shape=t)
             decay = pm.HalfNormal('decay', sd=200, shape=t)
             # Prior for likelihood
@@ -33,7 +32,7 @@ class additive_model_lin_exp(object):
             # Building linear predictor
             lin_pred=0
             for ii in range(1,t+1):
-                lin_pred += self.bias(w[ii-1],decay[ii-1],xc[ii-1])(x[ii,:])
+                lin_pred += self.bias(w[ii-1],decay[ii-1])(x[ii,:])
 
             phi2 = pm.Deterministic('phi2', 0.5*lam + (1-lam)*phi(b + lin_pred + x[0,:]/sigma))
             y = pm.Bernoulli('y', p=phi2, observed=y)
@@ -49,13 +48,12 @@ class additive_model_lin_exp(object):
                           start=start,
                           progressbar=True) # draw posterior samples
 
-        return trace, pm.dic(trace,model)
+        return trace, model
 
     def posterior_summary(self,trace):
 
         w = trace['w']
         decay = trace['decay']
-        xc = trace['xc']
         samples,t = w.shape
 
         # constructing functions from posterior
@@ -67,7 +65,7 @@ class additive_model_lin_exp(object):
 
         for lag in range(t):
             f_post = np.empty((samples,nplot))
-            for i_s,w_,d_,xc_ in zip(range(samples),w[:,lag],decay[:,lag],xc[:,lag]):
+            for i_s,w_,d_,xc_ in zip(range(samples),w[:,lag],decay[:,lag]):
                 f_post[i_s,:] = self.bias_np(w_,d_,xc_)(xp)
             m[lag,:] = f_post.mean(axis=0)
             s[lag,:] = f_post.std(axis=0)
