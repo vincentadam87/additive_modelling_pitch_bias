@@ -163,7 +163,7 @@ class Dataloader(object):
 
 
 
-def get_trial_covariates_single(f1,f2,y,T=1):
+def get_trial_covariates_single(f1,f2,y,T=1,inf=0):
     '''
     Build column matrix: [df. d1, d2, ... dT]
     where di is the distance from f1 to the mean of the trial T back
@@ -174,16 +174,19 @@ def get_trial_covariates_single(f1,f2,y,T=1):
     assert f1.ndim == 1
     assert f1.shape == f2.shape
     n_trials= len(f1)
-    x_ = np.zeros((T+1,n_trials-T))
+    x_ = np.zeros((T+1+inf,n_trials-T))
     y_= y[T:]
     # Trial difficulty
     x_[0,:]=(f1-f2)[T:]
     # Distance F1(t) - 1/2(F1+F2)(t-T)
     for t in range(1,T+1):
         x_[t,:]= f1[T:]-0.5*(f1+f2)[T-t:-t]
+    #***adding inf****
+    if inf == 1:
+        x_[-1,:] = f1[T:] - f1.mean(axis=0)
     return x_,y_
 
-def get_trial_covariates(F1,F2,Y,T=1):
+def get_trial_covariates(F1,F2,Y,T=1,inf=0):
     '''
     Build column matrix: [df. d1, d2, ... dT], for multiple subjects.
     where di is the distance from f1 to the mean of the trial T back
@@ -197,7 +200,7 @@ def get_trial_covariates(F1,F2,Y,T=1):
     X_ = []
     Y_ = []
     for f1,f2,y in zip(F1,F2,Y):
-        x, y = get_trial_covariates_single(f1,f2,y,T)
+        x, y = get_trial_covariates_single(f1,f2,y,T,inf)
         X_.append(x)
         Y_.append(y)
     return np.hstack(X_),np.hstack(Y_)
