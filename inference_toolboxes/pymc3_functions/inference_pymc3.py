@@ -22,7 +22,7 @@ class additive_model_lin_exp(object):
 
         with pm.Model() as model:
             # Priors for additive predictor
-            w = pm.Normal('w', mu=0, sd=2000, shape=t)
+            w = pm.Normal('w', mu=0, sd=1, shape=t)
             decay = pm.HalfNormal('decay', sd=200, shape=t)
             # Prior for likelihood
             sigma = pm.Uniform('sigma', 0, 0.3)
@@ -42,7 +42,8 @@ class additive_model_lin_exp(object):
             start = pm.find_MAP() # Find starting value by optimization
             print("MAP found:")
             # step = pm.NUTS(scaling = start)
-            step = pm.Slice()
+            #step = pm.Slice()
+            step = pm.NUTS(scaling=start)
             trace = pm.sample(mcmc_samples,
                           step,
                           start=start,
@@ -71,6 +72,24 @@ class additive_model_lin_exp(object):
             s[lag,:] = f_post.std(axis=0)
 
         return xp,m,s
+
+    def scatter_plot_posterior(self,trace,varnames):
+        vars = [trace[name] for name in varnames]
+        nvar = len(varnames)
+
+        n,t = vars[0].shape
+
+        for l in range(t):
+            fig,axarr = plt.subplots(nvar,nvar)
+            for i in range(nvar):
+                axarr[i,i].hist(vars[i][:,l])
+                axarr[i,i].set_xlabel(varnames[i])
+                for j in range(i+1,nvar):
+                    axarr[i,j].scatter(vars[i][:,l],vars[j][:,l])
+                    axarr[i,j].set_xlabel(varnames[i])
+                    axarr[i,j].set_ylabel(varnames[j])
+            plt.show()
+
 
 
 
