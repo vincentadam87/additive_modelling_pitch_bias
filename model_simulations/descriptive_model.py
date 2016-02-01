@@ -82,7 +82,7 @@ class LinExpAdditiveModel(AdditiveModel):
 if __name__ == '__main__':
 
     # Declare model parameters
-    prm_add = [[1,1],[0.5,2]] # parameters of additive functions
+    prm_add = [[1,1],[0.5,2],[0.1,0.1]] # parameters of additive functions
     prm_lin = .1 # linear parameter
     prm_lik = .1 # parameter of the likelihood
 
@@ -93,11 +93,11 @@ if __name__ == '__main__':
     xp = np.linspace(-5,5,100)
     for a in model.a:
         plt.plot(xp,a(xp))
-    plt.close()
+    plt.show()
 
     # sampling
     n = 1000
-    d = 3
+    d = len(prm_add)
     x = (2*np.random.rand(n,d+1)-1)*4
     b = model.bern(x)
     y = np.random.rand(n)<b
