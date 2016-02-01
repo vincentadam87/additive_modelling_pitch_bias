@@ -113,13 +113,16 @@ class Dataloader(object):
     def __init__(self, fname):
         self.fname = fname
 
-    def subject_data(self,i_sub,flat=False):
+    def subject_data(self,i_sub,acc_filter = (0,1) , flat=False):
         """
         Loading subject data
         :param i_sub:
         :return: stimuli and response
         """
         data = sio.loadmat(self.fname)
+        accr = data['acc'].mean(axis=1)
+        filter = np.where((accr > acc_filter[0]) & (accr <= acc_filter[1]) )
+        i_sub = filter[0]
         F1 = np.log(np.array(data['s1'][i_sub,:]))
         F2 = np.log(np.array(data['s2'][i_sub,:]))
         Y = data['resp'][i_sub,:]
