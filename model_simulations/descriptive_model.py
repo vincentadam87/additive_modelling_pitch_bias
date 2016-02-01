@@ -1,27 +1,30 @@
 import numpy as np
-from scipy.stats import norm
 from abc import abstractmethod
-# from utils import phi
-
+from utils import phi
+from numpy import exp
+from matplotlib import pyplot as plt
 
 class AbstractModel(object):
+    '''
+    Abstract class for models with bernoulli likelihood and a predictor
+    p(y=1|x) = g(f(x))
+    '''
 
     @abstractmethod
     def __init__(self):
         raise NotImplementedError()
 
     @abstractmethod
-    def bern(self,f1,f2,n_samp=100000):
+    def bern(self,X):
+        ''' bern(x)= g(f(x)) '''
         raise NotImplementedError()
 
-    def llh(self,F1,F2,Y,n_samp=5000,skip=None):
-        """probability f1 higher"""
-        assert len(F1.shape)==1, 'input must be 1d ndarray'
-        assert len(F1.shape)==1, 'input must be 1d ndarray'
+    def llh(self,X,Y,skip=None):
+        ''' p(y|x) = g(f(x))^y*(1-g(f(x)))^(1-y) '''
         assert len(Y.shape)==1, 'input must be 1d ndarray'
-        assert (F1.shape == F2.shape)&(F1.shape == Y.shape)
+        assert (X.shape[0] == Y.shape[0])
         eps = 1.e-5
-        B = self.bern(F1,F2,n_samp=n_samp)
+        B = self.bern(X)
         B[B<eps]=eps
         B[B>1-eps]=1-eps
         if skip==None:
@@ -31,45 +34,76 @@ class AbstractModel(object):
         llh = np.sum( (Y*np.log(B) + (1-Y)*np.log(1-B))[skip]  )
         return llh
 
-class DescriptiveModel(AbstractModel):
+class AdditiveModel(AbstractModel):
     """
     A descriptive model of the bias
     Bias is deterministic, decision are noisy (probit model)
-    p(y=1|df,d1,...,dtau) = phi( df/s - a(d1) - ... - a(dtau) )
-    - df = f2 - f1
-    - di = distance from f1 to mean of previous trial ( i behind )
+    p(y=1|x0,x1,...,xtau) = lik( x0/p_lin - a(x1) - ... - a(xtau) )
     """
 
-    def __init__(self,a,s):
+    def __init__(self,a,p_lin,lik):
         """
-        a: bias function
-        s: sensory std
-        p(y=1|df,d1,...,dtau) = phi( df/s - a(d1) - ... - a(dtau) )
-        - df = f2 - f1
-        - di = distance from f1 to mean of previous trial ( i behind )
+        a: bias functions
+        p_lin: linear parameter
+        lik: likelihood function
+        p(y=1|x0,x1,...,xtau) = lik( x0/p_lin - a1(x1) - ... - atau(xtau) )
         """
         assert isinstance(a,list)
         self.a = a
-        self.s = s
+        self.p_lin = p_lin
+        self.lik = lik
 
-    def bern(self,f1,f2,n_samp=None):
+    def bern(self,x):
         """
-        Response probability for a sequence of pure tones
+        Response probability p(y=1|x)
         """
-        df = f2-f1 # the tone interval in current trial
-        alpha = np.zeros(f1.shape)
-        for i_a,a_ in enumerate(self.a):
-            d = np.zeros(f1.shape)
-            d[i_a+1:] = f1[i_a+1:] - 0.5*(f1+f2)[:-(i_a+1)] # distance of f1 to previous trials
-            alpha += a_(d)
-        return phi(df/self.s-alpha)
+        alpha = np.zeros(x.shape[0])
+        for i_a,a_ in enumerate(self.a): # iterate over lag functions
+            alpha += a_(x[:,i_a+1])
+        return self.lik(x[:,0]/self.p_lin-alpha)
 
-    def bernD(self,df,d):
-        """
-        Response probability for a sequence implicitely described by df, d1,..,dtau
-        """
-        assert isinstance(d,list)
-        alpha = np.zeros(df.shape)
-        for a_,d_ in zip(self.a,d):
-            alpha += a_(d_)
-        return phi(df/self.s-alpha)
+class LinExpAdditiveModel(AdditiveModel):
+    """
+    A descriptive model of the bias
+    Bias is deterministic, decision are noisy (probit model)
+    p(y=1|x0,x1,...,xtau) = phi( x0/p_lin - a(x1) - ... - a(xtau) )
+    where a :x = p_add[0]*x*exp(-|x|/p_add[1])
+    """
+
+    def __init__(self,prm_add,prm_lin,prm_lik):
+        """ x : p[0]*x*exp(-|x|/p[1]) """
+        bias = lambda w,d : lambda x : w*x*exp(-abs(x)/d)
+        lik = lambda l : lambda x : l/2+(1-l)*phi(x)
+        a = [bias(p[0],p[1]) for p in prm_add]
+        super(LinExpAdditiveModel,self).__init__(a,prm_lin,lik(prm_lik))
+
+
+
+if __name__ == '__main__':
+
+    # Declare model parameters
+    prm_add = [[1,1],[0.5,2]] # parameters of additive functions
+    prm_lin = .1 # linear parameter
+    prm_lik = .1 # parameter of the likelihood
+
+    # Create model instance
+    model = LinExpAdditiveModel(prm_add,prm_lin,prm_lik)
+
+    # plotting functions
+    xp = np.linspace(-5,5,100)
+    for a in model.a:
+        plt.plot(xp,a(xp))
+    plt.close()
+
+    # sampling
+    n = 1000
+    d = 3
+    x = (2*np.random.rand(n,d+1)-1)*4
+    b = model.bern(x)
+    y = np.random.rand(n)<b
+
+    # compute likelihood
+    print model.llh(x,y)
+
+
+
