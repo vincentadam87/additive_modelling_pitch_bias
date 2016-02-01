@@ -113,12 +113,29 @@ class Dataloader(object):
     def __init__(self, fname):
         self.fname = fname
 
+    def subject_data_from_indices(self,i_sub):
+        """
+        Loading subject data from their indices
+        """
+        assert isinstance(i_sub,list)
+        data = sio.loadmat(self.fname)
+        F1 = np.log(np.array(data['s1'][i_sub,:]))
+        F2 = np.log(np.array(data['s2'][i_sub,:]))
+        Y = data['resp'][i_sub,:]
+        return F1,F2,Y
+
+    def subject_indices_for_acc_range(self,acc_filter=(0,1)):
+        data = sio.loadmat(self.fname)
+        acc = np.mean(data['acc'],axis=1)
+        return np.where((acc > acc_filter[0]) & (acc <= acc_filter[1]) )[0]
+
     def subject_data(self,i_sub,acc_filter = (0,1) , flat=False):
         """
         Loading subject data
         :param i_sub:
         :return: stimuli and response
         """
+
         data = sio.loadmat(self.fname)
         accr = data['acc'].mean(axis=1)
         filter = np.where((accr > acc_filter[0]) & (accr <= acc_filter[1]) )
@@ -130,20 +147,6 @@ class Dataloader(object):
             return F1.flatten(),F2.flatten(),Y.flatten()
         else:
             return F1,F2,Y
-
-    def group_by_acc(self,th):
-        """
-        Group subjects by accuracy
-        :param th:
-        :return: indices of subjects whose accuracy is below (resp above) the threshold
-        """
-        data = sio.loadmat(self.fname)
-        acc = np.mean(data['acc'],axis=1)
-        order = np.argsort(acc)
-        acc= acc[order]
-        I_good = order[acc>th]
-        I_poor = order[acc<=th]
-        return I_poor, I_good
 
     def group_by_acc_interval(self, th_down=0.,th_up=1.):
         """
@@ -198,10 +201,6 @@ def get_trial_covariates(F1,F2,Y,T=1):
         X_.append(x)
         Y_.append(y)
     return np.hstack(X_),np.hstack(Y_)
-
-
-
-
 
 
 if __name__ == '__main__':
