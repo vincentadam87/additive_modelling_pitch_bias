@@ -65,8 +65,8 @@ class additive_model_lin_exp(object):
 
         for lag in range(t):
             f_post = np.empty((samples,nplot))
-            for i_s,w_,d_,xc_ in zip(range(samples),w[:,lag],decay[:,lag]):
-                f_post[i_s,:] = self.bias_np(w_,d_,xc_)(xp)
+            for i_s,w_,d_ in zip(range(samples),w[:,lag],decay[:,lag]):
+                f_post[i_s,:] = self.bias_np(w_,d_)(xp)
             m[lag,:] = f_post.mean(axis=0)
             s[lag,:] = f_post.std(axis=0)
 
