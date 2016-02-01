@@ -137,7 +137,7 @@ class Dataloader(object):
         :param th:
         :return: indices of subjects whose accuracy is below (resp above) the threshold
         """
-        data = loadmat(self.fname)
+        data = sio.loadmat(self.fname)
         acc = np.mean(data['acc'],axis=1)
         order = np.argsort(acc)
         acc= acc[order]
