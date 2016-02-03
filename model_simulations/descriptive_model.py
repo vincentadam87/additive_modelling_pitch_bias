@@ -5,6 +5,7 @@ from numpy import exp
 from matplotlib import pyplot as plt
 from scipy.optimize import minimize
 
+sig = lambda x : 1./(1+np.exp(-x))
 
 class AbstractModel(object):
     '''
@@ -79,6 +80,11 @@ class LinAdditiveModel(AdditiveModel):
         a = [self.bias(p) for p in prm_add]
         super(LinAdditiveModel,self).__init__(a,prm_lin,self.lik(prm_lik))
 
+    def set_params_uc(self,prm_add=[],prm_lin=[],prm_lik=[]):
+        prm_add = [ exp(p[0]) for p in prm_add ]
+        prm_lik = 0.5*sig(prm_lik)
+        self.__init__(prm_add,prm_lin,prm_lik)
+
     def flat_prm(self,p_add,p_lin,p_lik):
         return np.concatenate([np.array(p_add).flatten(),[p_lin],[p_lik]])
 
@@ -104,6 +110,11 @@ class LinExpAdditiveModel(AdditiveModel):
         a = [self.bias(p) for p in prm_add]
         super(LinExpAdditiveModel,self).__init__(a,prm_lin,self.lik(prm_lik))
 
+    def set_params_uc(self,prm_add=[],prm_lin=[],prm_lik=[]):
+        prm_add = [[exp(p[0]),exp(p[1])] for p in prm_add ]
+        prm_lik = 0.5*sig(prm_lik)
+        self.__init__(prm_add,prm_lin,prm_lik)
+
     def flat_prm(self,p_add,p_lin,p_lik):
         return np.concatenate([np.array(p_add).flatten(),[p_lin],[p_lik]])
 
@@ -115,15 +126,15 @@ class LinExpAdditiveModel(AdditiveModel):
         return p_add,p_lin,p_lik
 
 
-def ml_fit(x,y,w0,mod,prop_bstrap=0.9,n_rep=10):
+def ml_fit(x,y,w0,mod,prop_bstrap=0.9,n_rep=10,n_restart=5):
 
     def bern(w,x,mod):
         p_add,p_lin,p_lik = mod.unflat_param(w)
-        mod.__init__(p_add,p_lin,p_lik)
+        mod.set_params_uc(p_add,p_lin,p_lik)
         b = mod.bern(x)
         eps = 1e-5
-        b[b>1-eps]=1-eps
-        b[b<eps]=eps
+        b[np.where(b>1-eps)]=1-eps
+        b[np.where(b<eps)]=eps
         return b
 
     def llh(w,x,y,mod):
@@ -139,8 +150,18 @@ def ml_fit(x,y,w0,mod,prop_bstrap=0.9,n_rep=10):
         x_ = x[I,:]
         y_ = y[I]
         err = lambda w : -llh(w,x_,y_,mod)
-        r = minimize(err,w0)
-        res.append(r.x)
+        #==================
+        temp_r = []
+        lik = []
+        for k in range(n_restart):
+            w0_ = w0 + np.random.randn(w0.shape[0])
+            r = minimize(err,w0_)
+            temp_r.append(r)
+            lik.append(r.fun)
+        i_min = np.argmin(lik)
+        r_best = temp_r[i_min]
+        #==================
+        res.append(r_best.x)
     print 'done'
     res = np.vstack(res)
     return res
