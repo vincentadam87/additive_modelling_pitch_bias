@@ -1,9 +1,15 @@
+'''
+This script is very similar to fit_wide_range
+The only difference is in the final plotting to superimpose curves across subject groups
+'''
+
 from model_simulations.descriptive_model import *
 from utils import *
 from matplotlib import pyplot as plt
 from data_loader.load_data import *
 import Globals
 import os
+
 
 
 n_rep = 30
@@ -64,6 +70,7 @@ for model in ['explin','lin']:
             if model == 'explin':
                 mod = LinExpAdditiveModel()
                 w0 = np.zeros((2*T+2,))-5
+
                 #w0[:-3] = -5
             elif model == 'lin':
                 mod = LinAdditiveModel()
