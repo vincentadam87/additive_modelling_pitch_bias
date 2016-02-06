@@ -12,14 +12,17 @@ import os
 
 
 
-n_rep = 30
+n_rep = 10
+n_restart = 5
+T=1
 
-for model in ['explin','lin']:
 
-    for thresh in [0.1,1]:
+for model in ['lin','explin']:
+
+    for thresh in [0.1,0.2,1]:
 
         col = 'rgb'
-        fig1, axarr1 = plt.subplots(2,1)
+        fig1, ax1 = plt.subplots()
 
 
         for i_typ,typ in enumerate(['good','poor']):
@@ -49,7 +52,6 @@ for model in ['explin','lin']:
             # Preprocess data for regression
             #=========================================
 
-            T=1
             x,y = get_trial_covariates(F1,F2,Y,T=T,inf=0)
             x = x.T
 
@@ -68,20 +70,17 @@ for model in ['explin','lin']:
             #=========================================
 
             if model == 'explin':
-                mod = LinExpAdditiveModel()
-                w0 = np.zeros((2*T+2,))-5
-
-                #w0[:-3] = -5
+                mod_fit = LinExpAdditiveModel()
             elif model == 'lin':
-                mod = LinAdditiveModel()
-                w0 = np.zeros((T+2,))-5
+                mod_fit = LinAdditiveModel()
+            w0 = mod_fit.smart_init(T)
 
             #=========================================
             # Run ML fit
             #=========================================
 
 
-            res = ml_fit(x,y,w0,mod,prop_bstrap=0.9,n_rep=n_rep)
+            res = ml_fit(x,y,w0,mod_fit,prop_bstrap=0.9,n_rep=n_rep,n_restart=n_restart,tol=1.e-7)
 
             #========================================
 
@@ -92,7 +91,7 @@ for model in ['explin','lin']:
                 ax.scatter(res[:,2*lag],res[:,2*lag+1])
                 ax.set_xlabel('w')
                 ax.set_ylabel('decay')
-                ax.set_title('lag '+str(lag+1)+'/ n='+str(n_eff) )
+                ax.set_title('lag 1, '+typ+'/ n='+str(n_eff) )
             axarr[-1].scatter(res[:,-2],res[:,-1])
             axarr[-1].set_xlabel('lin')
             axarr[-1].set_ylabel('lik')
@@ -109,13 +108,14 @@ for model in ['explin','lin']:
 
 
             for i_r,r in enumerate(res):
-                p_add,p_lin,_ = mod.unflat_param(r)
+                p_add,p_lin,p_lik = mod_fit.unflat_param(r)
                 for lag in range(T):
-                    kwargs = {'label':'lag'+str(lag+1)+'/ n='+str(n_eff)} if i_r==0 else {}
-                    axarr1[0].plot(xp,mod.bias(p_add[lag])(xp),col[i_typ],**kwargs)
-                    axarr1[1].plot(xp*p_lin,mod.bias(p_add[lag])(xp),col[i_typ],**kwargs)
-            handles, labels = axarr1[0].get_legend_handles_labels()
-            axarr1[0].legend(handles, labels)
+                    kwargs = {'label':'lag 1, '+typ+'/ n='+str(n_eff)} if i_r==0 else {}
+                    mod_fit.set_params_uc(p_add,p_lin,p_lik)
+                    ax1.plot(xp,mod_fit.a[lag](xp),col[i_typ],**kwargs)
+                    #axarr1[1].plot(xp*p_lin,mod.bias(p_add[lag])(xp),col[i_typ],**kwargs)
+            handles, labels = ax1.get_legend_handles_labels()
+            ax1.legend(handles, labels)
 
 
         plt.savefig(save_prefix+'curves_'+save_name)
