@@ -11,20 +11,6 @@ from GPflow.kernels import Kern
 import tensorflow as tf
 import time
 
-class Antisymmetric(Kern):
-    """
-    Construct an anti-symmetric kernel from an arbitrary kernel
-    """
-
-    def __init__(self,k):
-        self.k = k
-
-    def K(self,X,X2=None):
-        if X2 == None:
-            X2 = X
-        return self.k.K(X,X2) - self.k.K(-X,X2)
-    def Kdiag(self,X):
-        return self.k.Kdiag(2.*X)
 
 def gaussian_additive_2d(X,Y,D):
     # ============================= 2D ================================
@@ -65,8 +51,8 @@ def gaussian_additive_2d(X,Y,D):
     return m, n_func, f_indices, Ys, Vs
 
 
-def gaussian_additive_1d(X,Y,D):
-    # ============================= 1D ================================
+def gaussian_additive_1d(X,Y):
+    # ============================ 1D ================================
     D = 3
 
     Nz = 30
@@ -218,6 +204,8 @@ def plot_prediction_accuracy(mu_y,Y,bins=5):
     ax.set_xlabel('$\phi(\sum f_i)$',fontsize=20)
     ax.set_ylabel('$\\langle Y \\rangle$',fontsize=20)
 
+    for i in range(bins):
+        ax.annotate(str(len(Is[i])), xy=(Cs[i], Ys[i]))
 
     timestr = time.strftime("%Y%m%d-%H%M%S")
     plt.savefig('prediction_vs_responses_'+timestr+'.svg')
@@ -251,3 +239,22 @@ def plot_model_comparison(LB,names = None):
     timestr = time.strftime("%Y%m%d-%H%M%S")
     plt.savefig('model_comparison_'+timestr+'.svg')
     plt.close()
+
+
+def structure_from_indices(f_indices):
+    '''
+    Returns a string
+    :param f_indices: list of list
+    :return:
+    '''
+    assert isinstance(f_indices,list)
+    for c in f_indices:
+        assert isinstance(c,list)
+    s = ''
+    for c in f_indices:
+        ss = ''
+        for i in c:
+            ss+='x_'+str(i)+','
+        s+= 'f('+ss[:-1]+')+'
+    return s[:-1]
+
