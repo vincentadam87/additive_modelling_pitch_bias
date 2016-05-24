@@ -113,7 +113,7 @@ def gaussian_additive_1d(X,Y,D):
 
 OUTPUT_PATH = '/home/dell/Python_outputs/'
 
-def plot_1d(X,Ys,Vs,D):
+def plot_1d(X,Ys,Vs,D,labels):
     col=cm.rainbow(np.linspace(0,1,D))
     fig1,ax1 = plt.subplots()
     w = 5
@@ -139,6 +139,14 @@ def plot_1d(X,Ys,Vs,D):
         ax2.fill_between(X[o,d],
                          y1=np.squeeze(Yd[o]+np.sqrt(Vd[o])),
                          y2=np.squeeze(Yd[o]-np.sqrt(Vd[o])),facecolor=col[d],alpha=.5)
+
+        ax1.set_xlabel(labels[0][1],fontsize=20)
+        ax1.set_ylabel(labels[0][2],fontsize=20)
+        ax1.set_title(labels[0][0],fontsize=20)
+
+        ax2.set_xlabel(labels[1][1],fontsize=20)
+        ax2.set_ylabel(labels[1][2],fontsize=20)
+        ax2.set_title(labels[1][0],fontsize=20)
 
     # plt.show()
     timestr = time.strftime("%Y%m%d-%H%M%S")
@@ -175,8 +183,8 @@ def plot_2d(X, n_func, f_indices, Ys,Vs,D,labels):
                         X[o,f_indices[c][0]],
                         c=Yd[o])
             print Yd.shape
-            ax1.set_xlabel(labels[2],fontsize=20)
-            ax1.set_ylabel(labels[1],fontsize=20)
+            ax1.set_xlabel(labels[1],fontsize=20)
+            ax1.set_ylabel(labels[2],fontsize=20)
             ax1.set_title(labels[0],fontsize=20)
             # plt.show()
 
