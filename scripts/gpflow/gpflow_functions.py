@@ -221,6 +221,33 @@ def plot_prediction_accuracy(mu_y,Y,bins=5):
 
     timestr = time.strftime("%Y%m%d-%H%M%S")
     plt.savefig('prediction_vs_responses_'+timestr+'.svg')
+    plt.close()
 
 
+def plot_model_comparison(LB,names = None):
+    """
+    :param LB: list or array of marginal log likelihood
+    :param names: name of models
+    :return:
+    """
+    n_mods = len(LB) # number of models
+    if isinstance(LB,list):
+        LB = np.asarray(LB)
+    if names == None:
+        names = ['m'+str(i) for i in range(n_mods)]
 
+    assert len(names)==n_mods
+
+    LB -= np.max(LB)
+    LB = np.exp(LB)
+    LB /= LB.sum()
+
+    ind = np.arange(n_mods)
+    fig,ax = plt.subplots()
+    ax.bar(ind,LB)
+    ax.set_xticks(ind)
+    ax.set_xticklabels(names,fontdict=20)
+
+    timestr = time.strftime("%Y%m%d-%H%M%S")
+    plt.savefig('model_comparison_'+timestr+'.svg')
+    plt.close()
