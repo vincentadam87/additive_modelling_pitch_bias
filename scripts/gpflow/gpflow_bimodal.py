@@ -62,10 +62,11 @@ for filt in acc_filter:
 
     D = 3
     m, n_func, f_indices, Ys, Vs = gaussian_additive_2d(X,Y,D)
+    labels = ['title','x','y']
+    plot_2d(X, n_func,f_indices, Ys,Vs,D,labels)
 
-    plot_2d(X, n_func,f_indices, Ys,Vs,D)
 
+    m, Ys, Vs = gaussian_additive_1d(X,Y,D)
+    labels = [['title','x','y'],['title','x','y']]
 
-    m, n_func, f_indices, Ys, Vs = gaussian_additive_1d(X,Y,D)
-
-    plot_1d(X, n_func,f_indices, Ys,Vs,D)
+    plot_1d(X, Ys,Vs,D,labels)
