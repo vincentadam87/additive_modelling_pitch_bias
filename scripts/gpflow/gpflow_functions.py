@@ -24,7 +24,7 @@ class Antisymmetric(Kern):
             X2 = X
         return self.k.K(X,X2) - self.k.K(-X,X2)
     def Kdiag(self,X):
-        return self.k.Kdiag(0.*X) - self.k.Kdiag(2.*X)
+        return self.k.Kdiag(2.*X)
 
 def gaussian_additive_2d(X,Y,D):
     # ============================= 2D ================================
