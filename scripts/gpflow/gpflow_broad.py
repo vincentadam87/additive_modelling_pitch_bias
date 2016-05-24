@@ -11,8 +11,8 @@ import scipy.io as sio
 from gpflow_functions import *
 
  #==== load data ====
-DATA_PATH = '/home/dell/Dropbox/additive_modelling_pitch_bias/data_files/'
-OUTPUT_PATH = '/home/dell/Python_outputs/'
+DATA_PATH = '../../data_files/'
+OUTPUT_PATH = '../../output/'
 
 experiment = 'continuous'
 
@@ -21,7 +21,6 @@ s1_all = np.log(np.asarray((mat['s1']))).astype(float)
 s2_all = np.log(np.asarray((mat['s2']))).astype(float)
 resp_all = np.asarray(mat['resp']) + 0.
 acc_all = np.asarray(mat['acc']) + 0.
-
 
 
 # filter data
