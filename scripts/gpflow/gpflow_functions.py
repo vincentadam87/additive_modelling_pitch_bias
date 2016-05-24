@@ -183,3 +183,44 @@ def plot_2d(X, n_func, f_indices, Ys,Vs,D,labels):
             timestr = time.strftime("%Y%m%d-%H%M%S")
             plt.savefig(OUTPUT_PATH+timestr+'.svg')
             plt.close()
+
+
+def plot_prediction_accuracy(mu_y,Y,bins=5):
+    '''
+    Plotting prediction accuracy
+    :param mu_y: for all trials, predicted bernoulli parameter
+    :param Y: response for all trials
+    :return:
+    '''
+
+    # Binning predictions
+    nbin,edges,_ =plt.hist(mu_y,bins=bins)
+    plt.close()
+    Is = [] # index of points in bin
+    Cs = [] # center of bins
+    for i,e in enumerate(edges[:-1]):
+        I = np.where( (mu_y>edges[i])&(mu_y<=edges[i+1]))[0]
+        Is.append(I)
+        Cs.append(.5*(edges[i]+edges[i+1]))
+
+    # Associated average response
+    Ys = []
+    for I in Is:
+        Ys.append(Y[I,0].mean())
+
+    # plot and save
+    fig,ax = plt.subplots()
+    ax.plot(Cs,Ys,'x')
+    err = np.array(Ys)*(1-np.array(Ys))/np.sqrt(np.array(nbin))
+    ax.errorbar(Cs,Ys,yerr=err)
+
+    ax.plot(Cs,Cs,'-')
+    ax.set_xlabel('$\phi(\sum f_i)$',fontsize=20)
+    ax.set_ylabel('$\\langle Y \\rangle$',fontsize=20)
+
+
+    timestr = time.strftime("%Y%m%d-%H%M%S")
+    plt.savefig('prediction_vs_responses_'+timestr+'.svg')
+
+
+
