@@ -179,7 +179,7 @@ def plot_2d(X, n_func, f_indices, Ys,Vs,D,labels):
             plt.close()
 
 
-def plot_prediction_accuracy(mu_y,Y,bins=5):
+def plot_prediction_accuracy(mu_y,Y,bins=5, ax=None):
     '''
     Plotting prediction accuracy
     :param mu_y: for all trials, predicted bernoulli parameter
@@ -188,8 +188,7 @@ def plot_prediction_accuracy(mu_y,Y,bins=5):
     '''
 
     # Binning predictions
-    nbin,edges,_ =plt.hist(mu_y,bins=bins)
-    plt.close()
+    nbin,edges =np.histogram(mu_y,bins=bins)
     Is = [] # index of points in bin
     Cs = [] # center of bins
     for i,e in enumerate(edges[:-1]):
@@ -202,8 +201,6 @@ def plot_prediction_accuracy(mu_y,Y,bins=5):
     for I in Is:
         Ys.append(Y[I,0].mean())
 
-    # plot and save
-    fig,ax = plt.subplots()
     ax.plot(Cs,Ys,'x')
     err = np.array(Ys)*(1-np.array(Ys))/np.sqrt(np.array(nbin))
     ax.errorbar(Cs,Ys,yerr=err)
@@ -214,10 +211,6 @@ def plot_prediction_accuracy(mu_y,Y,bins=5):
 
     for i in range(bins):
         ax.annotate(str(len(Is[i])), xy=(Cs[i], Ys[i]))
-
-    timestr = time.strftime("%Y%m%d-%H%M%S")
-    plt.savefig('prediction_vs_responses_'+timestr+'.svg')
-    plt.close()
 
 
 def plot_model_comparison(LB,names = None):
