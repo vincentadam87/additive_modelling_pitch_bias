@@ -46,7 +46,7 @@ ranges = {
 
 
 typ = 'poor'
-#typ = 'good'
+typ = 'good'
 
 filt = ranges[typ]
 print 'filt:',filt
@@ -134,17 +134,18 @@ m1.Z[0].fixed = True # no need to optimize location for linear parameter
 # additive structure
 f_indices = [[0],[1]]
 # Inducing point locations
-Nz =20
+Nz =50
 Z = [np.array([[1]]) ,
      np.expand_dims( X[np.random.permutation(N)[:Nz],1],1) ]
 # Setting kernels
 ks = [Linear(1),
-      RBF(1,lengthscales=.1,variance=.5)]
+      RBF(1,lengthscales=.1,variance=1.)]
 # Declaring model
 m2 = SVGP_additive2(X, Y, ks, Bernoulli(), Z,\
                     f_indices=f_indices,name = 'bias f(d1)')
 m2.Z[0].fixed = True # no need to optimize location for linear parameter
 m2.kerns.parameterized_list[1].variance.fixed = True
+m2.kerns.parameterized_list[1].lengthscales.fixed = True
 
 
 
@@ -193,7 +194,7 @@ m4.kerns.parameterized_list[1].variance.fixed = True
 #-------------------------------------------------------------
 # Running optimization
 ms = [m1,m2,m3,m4]
-#ms = [m2,m4]
+ms = [m1,m2]
 
 for m in ms:
     m.optimize()
