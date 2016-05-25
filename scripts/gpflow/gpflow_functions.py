@@ -225,11 +225,18 @@ def plot_model_comparison(LB,names = None):
 
     ind = np.arange(n_mods)
     fig,ax = plt.subplots()
-    ax.bar(ind,LB)
+    w = 1.
+    ax.bar(ind,LB,w)
     ax.set_xticks(ind)
     ax.set_xticklabels(names,fontdict=20)
 
     timestr = time.strftime("%Y%m%d-%H%M%S")
+
+    ax.set_xticks(ind+w*.5)
+    ax.set_xticklabels(names, rotation=45)
+    ax.set_title('model comparison')
+    fig.tight_layout()
+
     plt.savefig('model_comparison_'+timestr+'.svg')
     plt.close()
 
