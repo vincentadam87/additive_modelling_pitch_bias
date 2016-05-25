@@ -10,24 +10,35 @@ from GPflow.svgp_additive import SVGP_additive2
 import scipy.io as sio
 from gpflow_functions import *
 
-
  #==== load data ====
 DATA_PATH = '/home/dell/Dropbox/additive_modelling_pitch_bias/data_files/'
-experiment = 'bimodal'
+OUTPUT_PATH = '/home/dell/Python_outputs/'
+
+experiment = 'neuro_sagi_FD'
 
 mat = sio.loadmat(DATA_PATH + experiment)
-s1_all = np.log(np.asarray((mat['s1']))).astype(float)
-s2_all = np.log(np.asarray((mat['s2']))).astype(float)
-resp_all = np.asarray(mat['resp']) + 0.
-acc_all = np.asarray(mat['acc']) + 0.
+s1_all = np.asarray((mat['s1_con'])).astype(float)
+s2_all = np.asarray((mat['s2_con'])).astype(float)
+resp_all = np.asarray(mat['resp_con']) + 0.
+acc_all = np.asarray(mat['acc_con']) + 0.
+
+mat = sio.loadmat(DATA_PATH + experiment)
+s1_all = np.asarray((mat['s1_dys'])).astype(float)
+s2_all = np.asarray((mat['s2_dys'])).astype(float)
+resp_all = np.asarray(mat['resp_dys']) + 0.
+acc_all = np.asarray(mat['acc_dys']) + 0.
 
 # filter data
 acc_filter = [[0.55,0.8], [0.8,1]]
+acc_filter = [[0,1]]
+acc_filter = [[0.55,0.8]]
+
 for filt in acc_filter:
     poor = np.where((acc_all.mean(1)>filt[0]) & (acc_all.mean(1)<filt[1]))
     s1 = s1_all[poor[0],:]
     s2 = s2_all[poor[0],:]
     resp = resp_all[poor[0],:]
+    acc = acc_all[poor[0],:]
 
 
     [nSub,nTrials] = s1.shape
@@ -62,10 +73,11 @@ for filt in acc_filter:
 
     D = 3
     m, n_func, f_indices, Ys, Vs = gaussian_additive_2d(X,Y,D)
+    labels = ['title','x','y']
+    plot_2d(X, n_func,f_indices, Ys,Vs,D,labels)
 
-    plot_2d(X, n_func,f_indices, Ys,Vs,D)
 
+    m, Ys, Vs = gaussian_additive_1d(X,Y,D)
+    labels = [['title','x','y'],['title','x','y']]
 
-    m, n_func, f_indices, Ys, Vs = gaussian_additive_1d(X,Y,D)
-
-    plot_1d(X, n_func,f_indices, Ys,Vs,D)
+    plot_1d(X, Ys,Vs,D,labels)
