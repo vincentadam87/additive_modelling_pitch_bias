@@ -11,6 +11,15 @@ from GPflow.kernels import Kern
 import tensorflow as tf
 import time
 
+import numpy as np
+from sklearn import metrics
+
+
+
+from scipy.special import erfinv
+iphi = lambda x : erfinv(2.*x-1)*np.sqrt(2)
+
+
 
 def gaussian_additive_2d(X,Y,D):
     # ============================= 2D ================================
@@ -179,7 +188,7 @@ def plot_2d(X, n_func, f_indices, Ys,Vs,D,labels):
             plt.close()
 
 
-def plot_prediction_accuracy(mu_y,Y,bins=5, ax=None):
+def plot_prediction_accuracy(mu_y,Y,bins=5, ax=None,mod=None):
     '''
     Plotting prediction accuracy
     :param mu_y: for all trials, predicted bernoulli parameter
@@ -189,28 +198,33 @@ def plot_prediction_accuracy(mu_y,Y,bins=5, ax=None):
 
     # Binning predictions
     nbin,edges =np.histogram(mu_y,bins=bins)
-    Is = [] # index of points in bin
-    Cs = [] # center of bins
-    for i,e in enumerate(edges[:-1]):
-        I = np.where( (mu_y>edges[i])&(mu_y<=edges[i+1]))[0]
-        Is.append(I)
-        Cs.append(.5*(edges[i]+edges[i+1]))
 
-    # Associated average response
-    Ys = []
-    for I in Is:
-        Ys.append(Y[I,0].mean())
+    I = np.argsort(mu_y.flat)
+    i_bins = [l for l in np.array_split(I, bins)]
+    Y_b = [Y[i] for i in i_bins]
+    mu_y_b = [mu_y[i] for i in i_bins]
 
-    ax.plot(Cs,Ys,'x')
-    err = np.array(Ys)*(1-np.array(Ys))/np.sqrt(np.array(nbin))
-    ax.errorbar(Cs,Ys,yerr=err)
+    xs = np.array([m.mean() for m in mu_y_b])
+    ys = np.array([y.mean() for y in Y_b])
 
-    ax.plot(Cs,Cs,'-')
-    ax.set_xlabel('$\phi(\sum f_i)$',fontsize=20)
-    ax.set_ylabel('$\\langle Y \\rangle$',fontsize=20)
+    if mod == 'probit':
+        print 'probit!'
+        xs,ys = iphi(xs),iphi(ys)
+        xlabel = '$\sum f_i$'
+        ylabel = '$\phi^{-1}(<Y>)$'
+    else:
+        xlabel = '$\phi(\sum f_i)$'
+        ylabel = '$<Y>$'
+
+    ax.plot(xs,ys,'x')
+    err = np.array(ys)*(1-np.array(ys))/np.sqrt(np.array(nbin))
+    ax.errorbar(xs,ys,yerr=err)
+    ax.plot(xs,xs,'-')
+    ax.set_xlabel(xlabel,fontsize=20)
+    ax.set_ylabel(ylabel,fontsize=20)
 
     for i in range(bins):
-        ax.annotate(str(len(Is[i])), xy=(Cs[i], Ys[i]))
+        ax.annotate(str(len(i_bins[i])), xy=(xs[i], xs[i]),fontsize=5)
 
 
 def plot_model_comparison(LB,names = None):
@@ -266,3 +280,27 @@ def structure_from_indices(f_indices):
         s+= 'f('+ss[:-1]+')+'
     return s[:-1]
 
+def xvalidate(model,X,Y):
+
+
+    AUCs = []
+    ftest = .5 # fraction test
+    n = len(Y)
+    n_train = int(n*(1.-ftest))
+    n_rep = int(1./ftest)
+    for i_rep in range(n_rep):
+        I = np.random.permutation(n)
+        I_train, I_test = I[:n_train],I[n_train:]
+        X_train,Y_train = X[I_train,:],Y[I_train,:]
+        X_test,Y_test = X[I_test,:],Y[I_test,:]
+        m = model()
+        m.X = X_train
+        m.Y = Y_train
+        res = m.optimize()
+        mu_test,_ = m.predict_y(X_test)
+        fpr, tpr, thresholds = metrics.roc_curve(Y_test.flatten(),
+                                                 mu_test.flatten(), pos_label=1)
+        AUC = metrics.auc(fpr, tpr)
+        AUCs.append(AUC)
+
+    return np.mean(AUCs),np.std(AUCs)

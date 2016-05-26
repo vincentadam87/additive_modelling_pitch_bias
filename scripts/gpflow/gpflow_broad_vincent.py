@@ -15,8 +15,6 @@ from matplotlib.pyplot import Rectangle
 from GPflow.kernels import Antisymmetric, RBF, Linear
 import time
 
-
-
 #==== load data ====
 
 DATA_PATH = '../../data_files/'
@@ -46,7 +44,7 @@ ranges = {
 
 
 typ = 'poor'
-typ = 'good'
+#typ = 'good'
 
 filt = ranges[typ]
 print 'filt:',filt
@@ -62,24 +60,28 @@ acc = acc_all[Iacc,:]
 
 print acc.shape
 
+lag = 2
 sm = (s1 + s2)*.5
-diff = (s1 - s2)[:,1:] # f1 - f2 at trial time
-prev = s1[:,1:]-sm[:,:-1] # f1(t) - (f1+f2)(t-1)
-inf = s1[:,1:] - s1.mean() # f1(t) - overallmean(f1)
-Y = resp[:,1:].astype(int)
+diff = (s1 - s2)[:,lag:] # f1 - f2 at trial time
+prev1 = s1[:,lag:]-sm[:,1:-lag+1] # f1(t) - (f1+f2)(t-1)
+prev2 = s1[:,lag:]-sm[:,:-lag] # f1(t) - (f1+f2)(t-2)
+inf = s1[:,lag:] - s1.mean() # f1(t) - overallmean(f1)
+Y = resp[:,lag:].astype(int)
+resp1 = resp[:,:-lag]*2.-1. # -1,+1
 
-print Y.shape,inf.shape,diff.shape,prev.shape
 
 
 
 a,b = Y.shape
 diff = np.reshape(diff,[a*b,1])
-prev = np.reshape(prev,[a*b,1])
+prev1 = np.reshape(prev1,[a*b,1])
+prev2 = np.reshape(prev2,[a*b,1])
+resp1 = np.reshape(resp1,[a*b,1])
 inf = np.reshape(inf,[a*b,1])
 Y = np.reshape(Y,[a*b,1])
-X = np.hstack([diff,prev,inf])
+X = np.hstack([diff,prev1,inf,prev2,resp1])
 
-Itrial = np.where((np.abs(prev)<0.9))[0]# subselecting
+Itrial = np.where((np.abs(prev1)<0.8))[0]# subselecting
 
 X,Y = X[Itrial,:],Y[Itrial,:]
 print X.shape,Y.shape
@@ -88,8 +90,12 @@ print X.shape,Y.shape
 cov_names = [
     '$df$',
     '$d_1$',
-    '$d_{\infty}$'
+    '$d_{\infty}$',
+    '$d_2$',
+    '$Y_{t-1}$'
 ]
+
+assert X.shape[1] == len(cov_names)
 
 print Y.shape,X.shape
 
@@ -116,99 +122,166 @@ print X.shape,Y.shape
 #-------------------------------------------------------------
 #-------- MODEL 1 --------------------------------------------
 
-# additive structure
-f_indices = [[0]]
-# Inducing point locations
-Z = [np.array([[1]])] # one pseudo input for linear term
-# Setting kernels
-ks = [Linear(1)]
-# Declaring model
-m1 = SVGP_additive2(X, Y, ks, Bernoulli(), Z,\
-                    f_indices=f_indices,name = 'no bias')
-m1.Z[0].fixed = True # no need to optimize location for linear parameter
-
+def model1():
+    # additive structure
+    f_indices = [[0]]
+    # Inducing point locations
+    Z = [np.array([[1]])] # one pseudo input for linear term
+    # Setting kernels
+    ks = [Linear(1)]
+    # Declaring model
+    m = SVGP_additive2(X, Y, ks, Bernoulli(), Z,\
+                        f_indices=f_indices,name = 'no bias')
+    m.Z[0].fixed = True # no need to optimize location for linear parameter
+    return m
 
 #-------------------------------------------------------------
 #-------- MODEL 2 --------------------------------------------
 
-# additive structure
-f_indices = [[0],[1]]
-# Inducing point locations
-Nz =50
-Z = [np.array([[1]]) ,
-     np.expand_dims( X[np.random.permutation(N)[:Nz],1],1) ]
-# Setting kernels
-ks = [Linear(1),
-      RBF(1,lengthscales=.1,variance=1.)]
-# Declaring model
-m2 = SVGP_additive2(X, Y, ks, Bernoulli(), Z,\
-                    f_indices=f_indices,name = 'bias f(d1)')
-m2.Z[0].fixed = True # no need to optimize location for linear parameter
-m2.kerns.parameterized_list[1].variance.fixed = True
-m2.kerns.parameterized_list[1].lengthscales.fixed = True
 
+def model2():
+    # additive structure
+    f_indices = [[0],[1]]
+    # Inducing point locations
+    Nz =50
+    Z = [np.array([[1]]) ,
+         np.expand_dims( X[np.random.permutation(N)[:Nz],1],1) ]
+    # Setting kernels
+    ks = [Linear(1),
+          RBF(1,lengthscales=.1,variance=1.)]
+    # Declaring model
+    m = SVGP_additive2(X, Y, ks, Bernoulli(), Z,\
+                        f_indices=f_indices,name = 'bias f(d1)')
+    m.Z[0].fixed = True # no need to optimize location for linear parameter
+    m.kerns.parameterized_list[1].variance.fixed = True
+    return m
 
 
 #-------------------------------------------------------------
 #-------- MODEL 3 --------------------------------------------
 
-# additive structure
-f_indices = [[0],[1],[2]]
-# Inducing point locations
-Nz =20
-Z = [np.array([[1]]) ,
-     np.expand_dims( X[np.random.permutation(N)[:Nz],1],1),
-     np.expand_dims( X[np.random.permutation(N)[:Nz],2],1)]
-# Setting kernels
-ks = [Linear(1),
-      RBF(1,lengthscales=.1,variance=.5),
-      RBF(1,lengthscales=.1,variance=.5)]
-# Declaring model
-m3 = SVGP_additive2(X, Y, ks, Bernoulli(), Z,\
-                    f_indices=f_indices,name = 'bias f(d1)+f(dinf)')
-m3.Z[0].fixed = True # no need to optimize location for linear parameter
-m3.kerns.parameterized_list[1].variance.fixed = True
-m3.kerns.parameterized_list[2].variance.fixed = True
-
+def model3():
+    # additive structure
+    f_indices = [[0],[1],[2]]
+    # Inducing point locations
+    Nz =20
+    Z = [np.array([[1]]) ,
+         np.expand_dims( X[np.random.permutation(N)[:Nz],1],1),
+         np.expand_dims( X[np.random.permutation(N)[:Nz],2],1)]
+    # Setting kernels
+    ks = [Linear(1),
+          RBF(1,lengthscales=.1,variance=.5),
+          RBF(1,lengthscales=.1,variance=.5)]
+    # Declaring model
+    m = SVGP_additive2(X, Y, ks, Bernoulli(), Z,\
+                        f_indices=f_indices,name = 'bias f(d1)+f(dinf)')
+    m.Z[0].fixed = True # no need to optimize location for linear parameter
+    m.kerns.parameterized_list[1].variance.fixed = True
+    m.kerns.parameterized_list[2].variance.fixed = True
+    return m
 
 #-------------------------------------------------------------
 #-------- MODEL 4 --------------------------------------------
 
-# additive structure
-f_indices = [[0],[1,2]]
-# Inducing point locations
-Nz =20
-Z = [np.array([[1]]) ,
-     X[np.random.permutation(N)[:Nz],1:]]
-print 'Z:',Z[1].shape
-# Setting kernels
-ks = [Linear(1),
-      RBF(2,lengthscales=.1,variance=.5)]
-# Declaring model
-m4 = SVGP_additive2(X, Y, ks, Bernoulli(), Z,\
-                    f_indices=f_indices,name = 'bias f(d1,dinf)')
-m4.Z[0].fixed = True # no need to optimize location for linear parameter
-m4.kerns.parameterized_list[1].variance.fixed = True
+def model4():
+    # additive structure
+    f_indices = [[0],[1,2]]
+    # Inducing point locations
+    Nz =20
+    Z = [np.array([[1]]) ,
+         X[np.random.permutation(N)[:Nz],1:]]
+    print 'Z:',Z[1].shape
+    # Setting kernels
+    ks = [Linear(1),
+          RBF(2,lengthscales=.1,variance=.5)]
+    # Declaring model
+    m = SVGP_additive2(X, Y, ks, Bernoulli(), Z,\
+                        f_indices=f_indices,name = 'bias f(d1,dinf)')
+    m.Z[0].fixed = True # no need to optimize location for linear parameter
+    m.kerns.parameterized_list[1].variance.fixed = True
+    return m
+
+#-------------------------------------------------------------
+#-------- MODEL 4 --------------------------------------------
+
+def model5():
+    # additive structure
+    f_indices = [[0],[4]]
+    # Inducing point locations
+    Z = [np.array([[1]]) ,
+         np.array([[1]])]
+    print 'Z:',Z[1].shape
+    # Setting kernels
+    ks = [Linear(1),
+          Linear(1)]
+    # Declaring model
+    m = SVGP_additive2(X, Y, ks, Bernoulli(), Z,\
+                        f_indices=f_indices,name = 'bias f(resp1)')
+    m.Z[0].fixed = True # no need to optimize location for linear parameter
+    m.kerns.parameterized_list[1].variance.fixed = True
+    return m
+
+def model6():
+    # additive structure
+    f_indices = [[0],[1],[4]]
+    # Inducing point locations
+    Nz =20
+    Z = [np.array([[1]]) ,
+         X[np.random.permutation(N)[:Nz],1:],
+         np.array([[1]])]
+    print 'Z:',Z[1].shape
+    # Setting kernels
+    ks = [Linear(1),
+          RBF(1,lengthscales=.1,variance=.5),
+          Linear(1)]
+    # Declaring model
+
+    m = SVGP_additive2(X, Y, ks, Bernoulli(), Z,\
+                        f_indices=f_indices,name = 'bias f(d1)+f(resp1)')
+    m.Z[0].fixed = True # no need to optimize location for linear parameter
+    m.kerns.parameterized_list[1].variance.fixed = True
+    return m
+
+def model(i):
+    return [model1,model2,model3,model4,model5,model6][i-1]
 
 
 #-------------------------------------------------------------
 # Running optimization
-ms = [m1,m2,m3,m4]
-ms = [m1,m2]
+ms = [model(i)() for i in [1,2,5,6]]
 
-for m in ms:
-    m.optimize()
+for m_ in ms:
+    m_.optimize()
+
+#=================================================================
+
+m_aucs,std_aucs = [],[]
+for i,_ in enumerate(ms):
+    m_auc, std_auc = xvalidate(model(i+1),X,Y)
+    m_aucs.append(m_auc)
+    std_aucs.append(std_auc)
+
+fig,ax = plt.subplots()
+ax.bar(np.arange(len(ms)),m_aucs,1.,yerr=std_aucs)
+ax.set_xlabel('model')
+ax.set_ylabel('AUC')
+fig.tight_layout()
+plt.savefig('AUC_'+timestr+'.svg')
+
+
 #-------------------------------------------------------------
 
 # plotting diagnosis predicted output binned vs actual output
 w = 4.
-fig, axarr = plt.subplots(1,len(ms),figsize=(len(ms)*w,w))
-for i,m in enumerate(ms):
-    mu_y,v_y = m.predict_y(X)
-    ax = axarr[i]
-    plot_prediction_accuracy(mu_y,Y,bins=10,ax=ax)
-fig.tight_layout()
-plt.savefig('pred_vs_y'+timestr+'.svg')
+l = np.max([len(ms),2])
+for mod in ['probit','']:
+    fig, axarr = plt.subplots(1,l,figsize=(l*w,w))
+    for i,m in enumerate(ms):
+        mu_y,v_y = m.predict_y(X)
+        ax = axarr[i]
+        plot_prediction_accuracy(mu_y,Y,bins=20,ax=ax,mod=mod)
+    fig.tight_layout()
+    plt.savefig(mod+'pred_vs_y'+timestr+'.svg')
 
 
 #=================================================================
