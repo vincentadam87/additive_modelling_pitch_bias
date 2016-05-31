@@ -102,6 +102,16 @@ X,Y = X[Itrial,:],Y[Itrial,:]
 print X.shape,Y.shape
 
 
+#TODO : add more info about filtering
+exp_details = {
+    'X':X,
+    'Y':Y,
+    'cov_names':cov_names,
+    'typ':typ,
+    'description':description
+}
+pickle.dump(exp_details,open(foldername+'/details.p','wb'))
+
 
 assert X.shape[1] == len(cov_names)
 
