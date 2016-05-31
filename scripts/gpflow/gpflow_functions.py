@@ -280,11 +280,9 @@ def structure_from_indices(f_indices):
         s+= 'f('+ss[:-1]+')+'
     return s[:-1]
 
-def xvalidate(model,X,Y):
-
+def xvalidate(model,X,Y,ftest=.25):
 
     AUCs = []
-    ftest = .5 # fraction test
     n = len(Y)
     n_train = int(n*(1.-ftest))
     n_rep = int(1./ftest)
@@ -296,11 +294,16 @@ def xvalidate(model,X,Y):
         m = model()
         m.X = X_train
         m.Y = Y_train
-        res = m.optimize()
+
+        success = False
+        while success == False:
+            res = m.optimize()
+            success = res['success']
+
         mu_test,_ = m.predict_y(X_test)
         fpr, tpr, thresholds = metrics.roc_curve(Y_test.flatten(),
                                                  mu_test.flatten(), pos_label=1)
         AUC = metrics.auc(fpr, tpr)
         AUCs.append(AUC)
 
-    return np.mean(AUCs),np.std(AUCs)
+    return AUCs
