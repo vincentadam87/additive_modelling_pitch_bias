@@ -280,30 +280,30 @@ def structure_from_indices(f_indices):
         s+= 'f('+ss[:-1]+')+'
     return s[:-1]
 
-def xvalidate(model,X,Y,ftest=.25):
+def xvalidate(model,X,Y):
 
-    AUCs = []
+    XVAL = []
     n = len(Y)
-    n_train = int(n*(1.-ftest))
-    n_rep = int(1./ftest)
-    for i_rep in range(n_rep):
-        I = np.random.permutation(n)
-        I_train, I_test = I[:n_train],I[n_train:]
-        X_train,Y_train = X[I_train,:],Y[I_train,:]
-        X_test,Y_test = X[I_test,:],Y[I_test,:]
-        m = model()
-        m.X = X_train
-        m.Y = Y_train
+    n_train = int(n*.7)
 
-        success = False
-        while success == False:
+    while len(XVAL)<10:
+
+        try:
+            I = np.random.permutation(n)
+            I_train, I_test = I[:n_train],I[n_train:]
+            X_train,Y_train = X[I_train,:],Y[I_train,:]
+            X_test,Y_test = X[I_test,:],Y[I_test,:]
+            m = model()
+            m.X = X_train
+            m.Y = Y_train
             res = m.optimize()
-            success = res['success']
-
-        mu_test,_ = m.predict_y(X_test)
-        fpr, tpr, thresholds = metrics.roc_curve(Y_test.flatten(),
+            mu_test,_ = m.predict_y(X_test)
+            fpr, tpr, thresholds = metrics.roc_curve(Y_test.flatten(),
                                                  mu_test.flatten(), pos_label=1)
-        AUC = metrics.auc(fpr, tpr)
-        AUCs.append(AUC)
 
-    return AUCs
+
+            XVAL.append([Y_test,mu_test])
+        except:
+            pass
+
+    return XVAL
